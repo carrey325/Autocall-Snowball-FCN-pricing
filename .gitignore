@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging and build artifacts
+build/
+dist/
+*.egg-info/
+
+# Test and coverage artifacts
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+
+# Jupyter and local runtime files
+.ipynb_checkpoints/
+.mplconfig/
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
+*.swp

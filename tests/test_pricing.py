@@ -15,14 +15,21 @@ from structured_products import (
     mc_greeks,
     price,
 )
+from structured_products.legacy_adapter import default_legacy_notebook_path
 
 
 MARKET = MarketData(rate=0.03, dividend_yield=0.0, volatility=0.2)
 MC_CONFIG = EngineConfig(n_paths=12_000, day_counter=252, steps_per_day=2, seed=7)
 PDE_CONFIG = EngineConfig(day_counter=252, steps_per_day=2, pde_spot_steps=300)
+LEGACY_NOTEBOOK_PATH = default_legacy_notebook_path()
+LEGACY_NOTEBOOK_AVAILABLE = LEGACY_NOTEBOOK_PATH.exists()
 
 
 class PricingTests(unittest.TestCase):
+    @unittest.skipUnless(
+        LEGACY_NOTEBOOK_AVAILABLE,
+        f"optional legacy PDE notebook not found: {LEGACY_NOTEBOOK_PATH.name}",
+    )
     def test_legacy_pde_price_runs_and_matches_regression(self) -> None:
         snowball = legacy_price(
             method="PDE",
@@ -113,6 +120,10 @@ class PricingTests(unittest.TestCase):
         flat_value = price(flat, MARKET, method="MC", engine_config=MC_CONFIG)
         self.assertGreater(abs(butterfly_value - flat_value), 1.0e-4)
 
+    @unittest.skipUnless(
+        LEGACY_NOTEBOOK_AVAILABLE,
+        f"optional legacy PDE notebook not found: {LEGACY_NOTEBOOK_PATH.name}",
+    )
     def test_supported_products_run_with_pde_when_expected(self) -> None:
         for product in [
             make_classic_autocall(),

@@ -31,6 +31,12 @@ def _clean_legacy_source(source: str) -> str:
 
 
 def _load_legacy_source(notebook_path: Path) -> str:
+    if not notebook_path.exists():
+        raise FileNotFoundError(
+            f"Legacy notebook not found at {notebook_path}. "
+            "Pass notebook_path=... to a legacy wrapper, or place the legacy "
+            "notebook at the default path."
+        )
     payload = json.loads(notebook_path.read_text(encoding="utf-8"))
     parts: list[str] = []
     for cell in payload["cells"]:
