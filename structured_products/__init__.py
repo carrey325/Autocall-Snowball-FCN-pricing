@@ -1,44 +1,50 @@
-"""Structured products pricing helpers."""
+"""Clean-room structured-products pricing framework."""
 
-from .autocall_engine_mc import AutocallMCResult, price_autocall_mc
-from .autocall_engine_pde import price_autocall_pde, support_matrix
-from .greeks import mc_greeks
-from .legacy_adapter import (
-    legacy_coupon_search,
-    legacy_greeks_compute,
-    legacy_price,
-    legacy_public_entry_points,
+from .builders import (
+    make_butterfly_snowball,
+    make_classic_snowball,
+    make_discount_entry_fcn,
+    make_dividend_snowball,
+    make_standard_fcn,
+    make_stepdown_snowball,
+    make_wide_snowball,
+    make_worst_of_fcn,
+    make_worst_of_snowball,
 )
-from .market import EngineConfig, MarketData
-from .pricing import price
+from .enums import BasketRule, CouponRule, PricingMethod, SameDayPriority
+from .market import MarketData
 from .products import (
-    AutocallProduct,
-    build_monthly_observation_days,
-    make_butterfly_autocall,
-    make_classic_autocall,
-    make_dividend_autocall,
-    make_stepdown_autocall,
-    make_wide_autocall,
+    AutocallFeature,
+    CouponFeature,
+    KnockInFeature,
+    RedemptionFeature,
+    StructuredNote,
 )
+from .results import FairCouponResult, GreeksResult, PricingResult
+
+__version__ = "0.2.0"
 
 __all__ = [
-    "AutocallMCResult",
-    "AutocallProduct",
-    "EngineConfig",
+    "AutocallFeature",
+    "BasketRule",
+    "CouponFeature",
+    "CouponRule",
+    "FairCouponResult",
+    "GreeksResult",
+    "KnockInFeature",
     "MarketData",
-    "build_monthly_observation_days",
-    "legacy_coupon_search",
-    "legacy_greeks_compute",
-    "legacy_price",
-    "legacy_public_entry_points",
-    "make_butterfly_autocall",
-    "make_classic_autocall",
-    "make_dividend_autocall",
-    "make_stepdown_autocall",
-    "make_wide_autocall",
-    "mc_greeks",
-    "price",
-    "price_autocall_mc",
-    "price_autocall_pde",
-    "support_matrix",
+    "PricingMethod",
+    "PricingResult",
+    "RedemptionFeature",
+    "SameDayPriority",
+    "StructuredNote",
+    "make_butterfly_snowball",
+    "make_classic_snowball",
+    "make_discount_entry_fcn",
+    "make_dividend_snowball",
+    "make_standard_fcn",
+    "make_stepdown_snowball",
+    "make_wide_snowball",
+    "make_worst_of_fcn",
+    "make_worst_of_snowball",
 ]

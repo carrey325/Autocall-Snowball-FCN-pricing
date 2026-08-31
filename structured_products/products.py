@@ -1,244 +1,125 @@
-"""Product specifications and lightweight builders for autocall structures."""
+"""Composable, immutable structured-note specifications."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from typing import Sequence
+from dataclasses import dataclass
 
-
-def _as_tuple(values: Sequence[float | int] | None) -> tuple[float | int, ...]:
-    if values is None:
-        return ()
-    return tuple(values)
-
-
-def build_monthly_observation_days(
-    maturity_years: float,
-    day_counter: int = 252,
-    start_month: int = 1,
-    step_months: int = 1,
-) -> tuple[int, ...]:
-    """Build monthly KO observation days using the notebook's day count style."""
-
-    total_months = max(1, int(round(maturity_years * 12)))
-    days: list[int] = []
-    total_days = max(1, int(round(maturity_years * day_counter)))
-    for month in range(start_month, total_months + 1, step_months):
-        day = min(total_days, int(round(month * day_counter / 12)))
-        if not days or day != days[-1]:
-            days.append(day)
-    if not days:
-        days.append(total_days)
-    return tuple(days)
+from .enums import BasketRule, CouponRule, SameDayPriority
+from .schedules import validate_days
 
 
 @dataclass(frozen=True)
-class AutocallProduct:
-    """Unified product spec for first-tier autocall notes.
-
-    Pricing follows the legacy notebook convention: returned notional is not
-    included in the product value. Coupon legs and KI downside only are priced.
-    """
-
-    product_name: str
-    s0: float
-    maturity: float
-    notional: float = 1.0
-    margin_ratio: float = 1.0
-    knock_in_barrier: float | None = None
-    knock_in_obs_rule: str = "daily"
-    knock_in_start_day: int = 0
-    knock_out_barrier_schedule: tuple[float, ...] = ()
-    knock_out_coupon_schedule: tuple[float, ...] = ()
-    maturity_coupon: float = 0.0
-    knock_out_observation_days: tuple[int, ...] = ()
-    loss_rule: str = "min(spot_return, 0)"
-    principal_redemption_rule: str = "full_notional"
-    strike: float | None = None
-    pricing_convention: str = "net_return_excluding_principal"
+class KnockInFeature:
+    barrier_ratio: float
+    monitoring_start_day: int = 1
+    initially_knocked_in: bool = False
 
     def __post_init__(self) -> None:
-        if self.s0 <= 0:
-            raise ValueError("s0 must be positive")
-        if self.notional <= 0:
-            raise ValueError("notional must be positive")
-        if self.maturity <= 0:
-            raise ValueError("maturity must be positive")
-        if not 0 < self.margin_ratio <= 1:
-            raise ValueError("margin_ratio must be in (0, 1]")
-        if self.knock_in_barrier is not None and self.knock_in_barrier <= 0:
-            raise ValueError("knock_in_barrier must be positive when provided")
-        if len(self.knock_out_barrier_schedule) != len(self.knock_out_coupon_schedule):
-            raise ValueError("KO barrier and coupon schedules must have the same length")
-        if len(self.knock_out_barrier_schedule) != len(self.knock_out_observation_days):
-            raise ValueError("KO barrier schedule must align with KO observation days")
-        if any(day <= 0 for day in self.knock_out_observation_days):
-            raise ValueError("KO observation days must be strictly positive")
-        if self.knock_out_observation_days and tuple(sorted(self.knock_out_observation_days)) != self.knock_out_observation_days:
-            raise ValueError("KO observation days must be sorted")
-
-    def maturity_days(self, day_counter: int) -> int:
-        return max(1, int(round(self.maturity * day_counter)))
-
-    def with_updates(self, **updates: object) -> "AutocallProduct":
-        return replace(self, **updates)
+        if self.barrier_ratio <= 0:
+            raise ValueError("knock-in barrier ratio must be positive")
+        if self.monitoring_start_day <= 0:
+            raise ValueError("knock-in monitoring start day must be positive")
 
 
-def make_classic_autocall(
-    *,
-    s0: float = 1.0,
-    maturity: float = 1.0,
-    notional: float = 1.0,
-    margin_ratio: float = 1.0,
-    knock_in_ratio: float = 0.8,
-    knock_out_ratio: float = 1.0,
-    knock_out_coupon: float = 0.18,
-    maturity_coupon: float | None = None,
-    day_counter: int = 252,
-    observation_days: Sequence[int] | None = None,
-) -> AutocallProduct:
-    obs_days = tuple(observation_days or build_monthly_observation_days(maturity, day_counter))
-    coupon = knock_out_coupon if maturity_coupon is None else maturity_coupon
-    return AutocallProduct(
-        product_name="classic_autocall",
-        s0=s0,
-        maturity=maturity,
-        notional=notional,
-        margin_ratio=margin_ratio,
-        knock_in_barrier=s0 * knock_in_ratio,
-        knock_out_barrier_schedule=tuple(s0 * knock_out_ratio for _ in obs_days),
-        knock_out_coupon_schedule=tuple(knock_out_coupon for _ in obs_days),
-        maturity_coupon=coupon,
-        knock_out_observation_days=obs_days,
-        strike=s0,
-    )
+@dataclass(frozen=True)
+class AutocallFeature:
+    observation_days: tuple[int, ...]
+    barrier_ratios: tuple[float, ...]
+    coupon_rates: tuple[float, ...]
+
+    def __post_init__(self) -> None:
+        size = len(self.observation_days)
+        if size == 0:
+            raise ValueError("autocall requires at least one observation")
+        if len(self.barrier_ratios) != size or len(self.coupon_rates) != size:
+            raise ValueError("autocall schedules must align with observation days")
+        if any(value <= 0 for value in self.barrier_ratios):
+            raise ValueError("autocall barriers must be positive")
 
 
-def make_wide_autocall(
-    *,
-    s0: float = 1.0,
-    maturity: float = 1.0,
-    notional: float = 1.0,
-    margin_ratio: float = 1.0,
-    knock_in_ratio: float = 0.75,
-    knock_out_ratio: float = 1.02,
-    knock_out_coupon: float = 0.12,
-    maturity_coupon: float | None = None,
-    day_counter: int = 252,
-    observation_days: Sequence[int] | None = None,
-) -> AutocallProduct:
-    obs_days = tuple(observation_days or build_monthly_observation_days(maturity, day_counter))
-    coupon = knock_out_coupon if maturity_coupon is None else maturity_coupon
-    return AutocallProduct(
-        product_name="wide_autocall",
-        s0=s0,
-        maturity=maturity,
-        notional=notional,
-        margin_ratio=margin_ratio,
-        knock_in_barrier=s0 * knock_in_ratio,
-        knock_out_barrier_schedule=tuple(s0 * knock_out_ratio for _ in obs_days),
-        knock_out_coupon_schedule=tuple(knock_out_coupon for _ in obs_days),
-        maturity_coupon=coupon,
-        knock_out_observation_days=obs_days,
-        strike=s0,
-    )
+@dataclass(frozen=True)
+class CouponFeature:
+    rule: CouponRule
+    payment_days: tuple[int, ...] = ()
+    rate_schedule: tuple[float, ...] = ()
+    maturity_rate: float = 0.0
+    survives_knock_in: bool = False
+
+    def __post_init__(self) -> None:
+        if self.maturity_rate < 0 or any(rate < 0 for rate in self.rate_schedule):
+            raise ValueError("coupon rates cannot be negative")
+        if self.rule is CouponRule.FIXED_PERIODIC:
+            if not self.payment_days or len(self.payment_days) != len(self.rate_schedule):
+                raise ValueError("periodic coupon rates must align with payment days")
+        elif self.payment_days or self.rate_schedule:
+            raise ValueError("contingent coupons cannot have periodic payment schedules")
 
 
-def make_dividend_autocall(
-    *,
-    s0: float = 1.0,
-    maturity: float = 1.0,
-    notional: float = 1.0,
-    margin_ratio: float = 1.0,
-    knock_in_ratio: float = 0.8,
-    knock_out_ratio: float = 1.0,
-    knock_out_coupon: float = 0.2,
-    maturity_coupon: float = 0.08,
-    day_counter: int = 252,
-    observation_days: Sequence[int] | None = None,
-) -> AutocallProduct:
-    obs_days = tuple(observation_days or build_monthly_observation_days(maturity, day_counter))
-    return AutocallProduct(
-        product_name="dividend_autocall",
-        s0=s0,
-        maturity=maturity,
-        notional=notional,
-        margin_ratio=margin_ratio,
-        knock_in_barrier=s0 * knock_in_ratio,
-        knock_out_barrier_schedule=tuple(s0 * knock_out_ratio for _ in obs_days),
-        knock_out_coupon_schedule=tuple(knock_out_coupon for _ in obs_days),
-        maturity_coupon=maturity_coupon,
-        knock_out_observation_days=obs_days,
-        strike=s0,
-    )
+@dataclass(frozen=True)
+class RedemptionFeature:
+    strike_ratio: float = 1.0
+    downside_participation: float = 1.0
+    include_principal: bool = True
+    principal_floor: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.strike_ratio <= 0:
+            raise ValueError("strike ratio must be positive")
+        if self.downside_participation < 0:
+            raise ValueError("downside participation cannot be negative")
+        if not 0 <= self.principal_floor <= 1:
+            raise ValueError("principal floor must be in [0, 1]")
 
 
-def make_butterfly_autocall(
-    *,
-    s0: float = 1.0,
-    maturity: float = 1.0,
-    notional: float = 1.0,
-    margin_ratio: float = 1.0,
-    knock_in_ratio: float = 0.8,
-    knock_out_ratio: float = 1.0,
-    front_coupon: float = 0.22,
-    back_coupon: float = 0.1,
-    maturity_coupon: float | None = None,
-    day_counter: int = 252,
-    observation_days: Sequence[int] | None = None,
-) -> AutocallProduct:
-    obs_days = tuple(observation_days or build_monthly_observation_days(maturity, day_counter))
-    if len(obs_days) == 1:
-        coupons = (front_coupon,)
-    else:
-        step = (back_coupon - front_coupon) / (len(obs_days) - 1)
-        coupons = tuple(front_coupon + step * idx for idx in range(len(obs_days)))
-    final_coupon = coupons[-1] if maturity_coupon is None else maturity_coupon
-    return AutocallProduct(
-        product_name="butterfly_autocall",
-        s0=s0,
-        maturity=maturity,
-        notional=notional,
-        margin_ratio=margin_ratio,
-        knock_in_barrier=s0 * knock_in_ratio,
-        knock_out_barrier_schedule=tuple(s0 * knock_out_ratio for _ in obs_days),
-        knock_out_coupon_schedule=coupons,
-        maturity_coupon=final_coupon,
-        knock_out_observation_days=obs_days,
-        strike=s0,
-    )
+@dataclass(frozen=True)
+class StructuredNote:
+    reference_spots: tuple[float, ...]
+    notional: float
+    maturity_days: int
+    coupon: CouponFeature
+    redemption: RedemptionFeature
+    issue_price: float | None = None
+    day_count: int = 252
+    basket_rule: BasketRule = BasketRule.SINGLE
+    knock_in: KnockInFeature | None = None
+    autocall: AutocallFeature | None = None
+    same_day_priority: SameDayPriority = SameDayPriority.KNOCK_OUT_FIRST
+    metadata: tuple[tuple[str, str], ...] = ()
 
+    def __post_init__(self) -> None:
+        refs = tuple(float(value) for value in self.reference_spots)
+        object.__setattr__(self, "reference_spots", refs)
+        if not refs or any(value <= 0 for value in refs):
+            raise ValueError("reference spots must be positive")
+        if self.notional <= 0 or self.maturity_days <= 0 or self.day_count <= 0:
+            raise ValueError("notional, maturity_days, and day_count must be positive")
+        if self.issue_price is None:
+            object.__setattr__(self, "issue_price", float(self.notional))
+        elif self.issue_price <= 0:
+            raise ValueError("issue price must be positive")
+        if self.basket_rule is BasketRule.SINGLE and len(refs) != 1:
+            raise ValueError("single-asset products require exactly one reference spot")
+        if self.basket_rule is BasketRule.WORST_OF and len(refs) < 2:
+            raise ValueError("worst-of products require at least two reference spots")
+        if self.knock_in and self.knock_in.monitoring_start_day > self.maturity_days:
+            raise ValueError("knock-in monitoring cannot start after maturity")
+        if self.autocall:
+            validate_days(
+                self.autocall.observation_days,
+                self.maturity_days,
+                name="autocall observation",
+            )
+        if self.coupon.rule is CouponRule.FIXED_PERIODIC:
+            validate_days(self.coupon.payment_days, self.maturity_days, name="coupon payment")
 
-def make_stepdown_autocall(
-    *,
-    s0: float = 1.0,
-    maturity: float = 1.0,
-    notional: float = 1.0,
-    margin_ratio: float = 1.0,
-    knock_in_ratio: float = 0.8,
-    first_knock_out_ratio: float = 1.03,
-    step_down_ratio: float = 0.01,
-    knock_out_coupon: float = 0.18,
-    maturity_coupon: float | None = None,
-    day_counter: int = 252,
-    observation_days: Sequence[int] | None = None,
-) -> AutocallProduct:
-    obs_days = tuple(observation_days or build_monthly_observation_days(maturity, day_counter))
-    barrier_schedule = tuple(
-        s0 * max(0.0, first_knock_out_ratio - step_down_ratio * idx)
-        for idx in range(len(obs_days))
-    )
-    coupon = knock_out_coupon if maturity_coupon is None else maturity_coupon
-    return AutocallProduct(
-        product_name="stepdown_autocall",
-        s0=s0,
-        maturity=maturity,
-        notional=notional,
-        margin_ratio=margin_ratio,
-        knock_in_barrier=s0 * knock_in_ratio,
-        knock_out_barrier_schedule=barrier_schedule,
-        knock_out_coupon_schedule=tuple(knock_out_coupon for _ in obs_days),
-        maturity_coupon=coupon,
-        knock_out_observation_days=obs_days,
-        strike=s0,
-    )
+    @property
+    def n_assets(self) -> int:
+        return len(self.reference_spots)
+
+    @property
+    def maturity_years(self) -> float:
+        return self.maturity_days / self.day_count
+
+    @property
+    def product_name(self) -> str:
+        return dict(self.metadata).get("template", "structured_note")
