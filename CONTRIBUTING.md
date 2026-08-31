@@ -1,7 +1,7 @@
 # Contributing
 
-Thanks for taking a look at this project. The repository is intentionally small,
-so changes should keep the pricing API easy to inspect and reproduce.
+Thanks for contributing. Changes must preserve the clean-room boundary, the
+composable product model, and reproducible numerical behavior.
 
 ## Local setup
 
@@ -15,20 +15,16 @@ python -m pip install -e ".[dev]"
 ## Run tests
 
 ```bash
-python -m unittest discover -s tests -v
+python -m coverage run -m pytest
+python -m coverage report
 ```
-
-Monte Carlo tests are self-contained. PDE regression tests run only when the
-optional legacy notebook expected by `structured_products.legacy_adapter` is
-available at the default path.
 
 ## Contribution guidelines
 
-- Keep product builders and pricing engines explicit rather than hiding payoff
-  behavior behind broad configuration dictionaries.
-- Add tests for new product variants, especially monotonicity checks and finite
-  price checks under fixed random seeds.
-- Document pricing conventions whenever a change affects coupons, redemption,
-  knock-in/knock-out monitoring, or returned principal.
+- Never add or execute legacy notebooks or employer-specific source.
+- Express marketing variants with feature and schedule data, not new engines.
+- Add hand-calculated payoff tests before extending a numerical engine.
+- Use common random numbers for Monte Carlo comparisons.
+- Document and justify numerical tolerances in `VALIDATION.md`.
 - Do not commit generated files such as `__pycache__`, `.DS_Store`, build
   outputs, or notebook checkpoints.

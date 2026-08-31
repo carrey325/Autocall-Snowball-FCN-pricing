@@ -17,6 +17,7 @@ dist/
 # Test and coverage artifacts
 .coverage
 .pytest_cache/
+.pytest_tmp/
 .mypy_cache/
 .ruff_cache/
 htmlcov/

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "structured-products-pricer"
-version = "0.1.0"
-description = "Pricing helpers for Snowball, FCN, and autocallable structured products."
+version = "0.2.0"
+description = "Clean-room Monte Carlo and PDE pricing for autocallable notes and FCNs."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -27,17 +27,36 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Office/Business :: Financial",
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 dependencies = [
-    "numpy>=1.24",
+    "numpy>=1.24,<3",
+    "scipy>=1.10,<2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0",
+    "coverage[toml]>=7,<8",
+    "pytest>=8,<10",
 ]
+
+[project.scripts]
+structured-products-pricer = "structured_products.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["structured_products*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--basetemp=.pytest_tmp"
+
+[tool.coverage.run]
+branch = true
+source = ["structured_products"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 90
