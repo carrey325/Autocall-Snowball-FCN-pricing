@@ -1,6 +1,6 @@
-# Autocallable Snowball & FCN Pricing Engine
+# Autocall Pricing and Risk Engine
 
-[![Tests](https://github.com/carrey325/Autocall-Snowball-FCN-pricing/actions/workflows/tests.yml/badge.svg)](https://github.com/carrey325/Autocall-Snowball-FCN-pricing/actions/workflows/tests.yml)
+[![Tests](https://github.com/carrey325/Autocall-pricing-and-risk-engine/actions/workflows/tests.yml/badge.svg)](https://github.com/carrey325/Autocall-pricing-and-risk-engine/actions/workflows/tests.yml)
 ![Python](https://img.shields.io/badge/Python-3.10--3.13-blue)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
