@@ -1,91 +1,87 @@
-# Structured Products Pricer
+# Autocallable Snowball & FCN Pricing Engine
 
-A clean-room Python framework for Snowballs, autocallable notes, fixed coupon
-notes (FCNs), and multi-asset worst-of structures.
+[![Tests](https://github.com/carrey325/Autocall-Snowball-FCN-pricing/actions/workflows/tests.yml/badge.svg)](https://github.com/carrey325/Autocall-Snowball-FCN-pricing/actions/workflows/tests.yml)
+![Python](https://img.shields.io/badge/Python-3.10--3.13-blue)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-The package combines a reproducible batched Monte Carlo engine with an
-independent one-dimensional Crank-Nicolson PDE benchmark. It also provides
-fair-coupon solving, bump-and-revalue Greeks, strict JSON configuration, and a
-command-line workflow.
+A modular Python framework for pricing and risk analysis of autocallable
+structured products. It combines reproducible Monte Carlo pricing for single-
+and multi-asset worst-of structures with an independent two-state
+Crank–Nicolson PDE benchmark for single-asset products.
 
-## Features
+## Project Highlights
 
-| Product | Monte Carlo | PDE |
-| --- | ---: | ---: |
-| Classic/Wide/Butterfly/Dividend Snowball | Yes | Yes |
-| Step-down Snowball | Yes | Yes |
-| Standard/Discount-entry FCN | Yes | Yes |
-| Worst-of Snowball/FCN | Yes | Explicitly unsupported |
+- Prices classic, wide, butterfly, dividend, and step-down Snowballs.
+- Prices standard, discount-entry, and worst-of FCNs.
+- Calculates fair coupon, Delta, Gamma, Vega, Theta, Rho, and correlation risk.
+- Reports Monte Carlo confidence intervals, KI/KO probabilities, and expected life.
+- Models product lifecycles with reusable knock-in, autocall, coupon, and
+  redemption features instead of product-specific payoff scripts.
+- Provides deterministic JSON configuration, Python API, and command-line workflows.
 
-- Immutable, composable product features and schedules.
-- Total present value and net value relative to issue price.
-- MC standard error, confidence interval, KI/KO probabilities, and expected life.
-- Per-underlying Delta, Gamma, and Vega, plus Theta, Rho, and correlation risk.
-- Runtime dependencies limited to NumPy, SciPy, and the Python standard library.
+## Pricing Methods
 
-## Installation
+**Monte Carlo**
+
+- Correlated risk-neutral GBM paths for single- and multi-asset products.
+- Philox random streams, fixed-seed reproducibility, and antithetic variates.
+- Batch-size-invariant simulations for stable fair-coupon and Greek calculations.
+
+**Crank–Nicolson PDE**
+
+- Independent two-state knocked-in / not-knocked-in valuation.
+- Exact application of knock-in, autocall, coupon, and maturity events.
+- One-dimensional benchmark for supported single-asset products.
+
+## Numerical Validation
+
+The project includes **91 automated tests**, **95% test coverage**, and CI across
+Python 3.10–3.13. Tests cover hand-calculated payoff paths, barrier-touch and
+same-day event rules, Monte Carlo reproducibility, PDE grid refinement, and
+cross-engine comparisons.
+
+For the benchmark classic Snowball on a 1,000 notional:
+
+| Method | Present Value |
+| --- | ---: |
+| Monte Carlo | 1000.693524 |
+| PDE | 1000.487825 |
+
+The difference is approximately **2.06 basis points**, with the PDE estimate
+inside the Monte Carlo 95% confidence interval. See
+[VALIDATION.md](VALIDATION.md) for the methodology and full numerical results.
+
+## Quick Start
 
 ~~~bash
 python -m pip install -e ".[dev]"
 ~~~
 
-Python 3.10 through 3.13 is supported.
-
-## Command line
-
-Price and calculate Greeks:
+Price a Snowball and calculate its Greeks:
 
 ~~~bash
 python main.py run --config configs/classic_snowball.json --method mc
 ~~~
 
-Other workflows:
+Compare Monte Carlo and PDE valuations:
 
 ~~~bash
-python main.py price --config configs/standard_fcn.json --method pde
-python main.py greeks --config configs/classic_snowball.json --method mc
-python main.py fair-coupon --config configs/classic_snowball.json --method pde \
-  --target-pv 1000 --lower 0.01 --upper 0.40
 python main.py compare --config configs/classic_snowball.json
 ~~~
 
-Every command prints deterministic JSON and accepts `--output` to write the same
-payload to a file. Common numerical controls can be overridden with `--paths`,
-`--seed`, and `--grid-size`.
+Solve for the fair coupon:
 
-## Python API
-
-~~~python
-from structured_products import MCConfig, MarketData, make_classic_snowball, price
-
-product = make_classic_snowball()
-market = MarketData(
-    spots=(100.0,),
-    rate=0.03,
-    dividend_yields=(0.0,),
-    volatilities=(0.2,),
-)
-result = price(product, market, "mc", MCConfig(n_paths=20_000, seed=7))
-print(result.to_dict())
+~~~bash
+python main.py fair-coupon --config configs/classic_snowball.json --method pde \
+  --target-pv 1000 --lower 0.01 --upper 0.40
 ~~~
 
-The public calculation functions are `price`, `calculate_greeks`, and
-`solve_fair_coupon`. Low-level random generators and PDE matrices are internal.
+## Model Scope
 
-## Model conventions
+The current implementation assumes risk-neutral geometric Brownian motion with
+flat rates, dividend yields, volatilities, and correlations. Barrier monitoring
+uses daily closes and ACT/252 year fractions. Multi-asset worst-of products are
+supported through Monte Carlo only.
 
-- Risk-neutral geometric Brownian motion with flat continuously compounded
-  rates, dividends, and volatilities.
-- Integer trading-day schedules with ACT/252 year fractions by default.
-- Daily-close knock-in monitoring.
-- Same-day event priority: knock-out, knock-in, periodic coupon, maturity.
-- Worst-of performance is the minimum current/reference ratio.
-- Returned results include principal; net value is PV minus issue price.
-
-See [MODEL_SPEC.md](MODEL_SPEC.md) for contract rules and
+See [MODEL_SPEC.md](MODEL_SPEC.md) for contract conventions and
 [VALIDATION.md](VALIDATION.md) for numerical tests and limitations.
-
-## Clean-room statement
-
-The runtime is self-contained. It does not load notebooks, dynamically execute
-external source, or depend on any legacy pricing adapter.
