@@ -12,7 +12,9 @@ from .builders import (
     make_worst_of_snowball,
 )
 from .enums import BasketRule, CouponRule, PricingMethod, SameDayPriority
+from .config import GreekConfig, MCConfig, PDEConfig, ResolvedConfig, load_config
 from .market import MarketData
+from .pricing import price
 from .products import (
     AutocallFeature,
     CouponFeature,
@@ -31,11 +33,15 @@ __all__ = [
     "CouponRule",
     "FairCouponResult",
     "GreeksResult",
+    "GreekConfig",
     "KnockInFeature",
     "MarketData",
+    "MCConfig",
+    "PDEConfig",
     "PricingMethod",
     "PricingResult",
     "RedemptionFeature",
+    "ResolvedConfig",
     "SameDayPriority",
     "StructuredNote",
     "make_butterfly_snowball",
@@ -47,4 +53,6 @@ __all__ = [
     "make_wide_snowball",
     "make_worst_of_fcn",
     "make_worst_of_snowball",
+    "load_config",
+    "price",
 ]
