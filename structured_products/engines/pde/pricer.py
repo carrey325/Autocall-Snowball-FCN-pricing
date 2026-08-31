@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from math import exp
 
 import numpy as np
 
 from ...config import PDEConfig
-from ...enums import BasketRule, CouponRule
+from ...enums import CouponRule
 from ...market import MarketData
 from ...payoffs import evaluate_path
 from ...products import StructuredNote
@@ -34,7 +33,7 @@ def support_matrix() -> dict[str, tuple[str, ...]]:
 
 def _validate(product: StructuredNote, market: MarketData) -> None:
     market.validate_for(product)
-    if product.basket_rule is not BasketRule.SINGLE or product.n_assets != 1:
+    if product.n_assets != 1:
         raise ValueError("PDE supports single-asset products only")
 
 

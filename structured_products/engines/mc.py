@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from math import exp, sqrt
+from math import sqrt
 from statistics import NormalDist
 
 import numpy as np

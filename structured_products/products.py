@@ -99,8 +99,6 @@ class StructuredNote:
             raise ValueError("issue price must be positive")
         if self.basket_rule is BasketRule.SINGLE and len(refs) != 1:
             raise ValueError("single-asset products require exactly one reference spot")
-        if self.basket_rule is BasketRule.WORST_OF and len(refs) < 2:
-            raise ValueError("worst-of products require at least two reference spots")
         if self.knock_in and self.knock_in.monitoring_start_day > self.maturity_days:
             raise ValueError("knock-in monitoring cannot start after maturity")
         if self.autocall:

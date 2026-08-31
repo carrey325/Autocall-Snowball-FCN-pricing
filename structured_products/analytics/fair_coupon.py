@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import sys
 
 from scipy.optimize import brentq
 
@@ -71,7 +72,7 @@ def solve_fair_coupon(
         lower_coupon,
         upper_coupon,
         xtol=tolerance,
-        rtol=max(tolerance, 4.0 * __import__("sys").float_info.epsilon),
+        rtol=max(tolerance, 4.0 * sys.float_info.epsilon),
         maxiter=max_iterations,
         full_output=True,
         disp=False,
