@@ -11,6 +11,7 @@ from .builders import (
     make_worst_of_fcn,
     make_worst_of_snowball,
 )
+from .analytics import calculate_greeks, solve_fair_coupon
 from .enums import BasketRule, CouponRule, PricingMethod, SameDayPriority
 from .config import GreekConfig, MCConfig, PDEConfig, ResolvedConfig, load_config
 from .market import MarketData
@@ -31,6 +32,7 @@ __all__ = [
     "BasketRule",
     "CouponFeature",
     "CouponRule",
+    "calculate_greeks",
     "FairCouponResult",
     "GreeksResult",
     "GreekConfig",
@@ -55,4 +57,5 @@ __all__ = [
     "make_worst_of_snowball",
     "load_config",
     "price",
+    "solve_fair_coupon",
 ]
