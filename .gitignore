@@ -24,6 +24,9 @@ htmlcov/
 # Jupyter and local runtime files
 .ipynb_checkpoints/
 .mplconfig/
+*.ipynb
+/old/
+results/
 
 # OS and editor files
 .DS_Store
